@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 import generateToken from "../utils/generateToken";
-import { registerEmail, passwordRecoveryEmail } from "../services/email";
+import { registerEmail, passwordRecoveryEmail } from "../email";
 
 import { RegisterRequestBody, LoginRequestBody } from "../types/auth";
 

@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
-import nodemailer from 'nodemailer';
 
-import { SendEmailParams } from "../../types/email";
+import { sendEmail } from "../services/emailService";
 
 function loadTemplate(templateName: string): string {
   const filePath = path.join(__dirname, "templates", templateName);
@@ -14,32 +13,6 @@ function fillTemplate(template: string, data: Record<string, string>): string {
     (output, [key, value]) => output.replace(new RegExp(`{{${key}}}`, "g"), value),
     template
   );
-}
-
-async function sendEmail({ toEmail, toName, subject, htmlContent }: SendEmailParams): Promise<void> {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST ?? "",
-      port: parseInt(process.env.EMAIL_PORT || '587', 10),
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER ?? "",
-        pass: process.env.EMAIL_PASS ?? "",
-      },
-    });
-
-    const fromName = process.env.EMAIL_FROM_NAME || 'Unknown';
-    const fromAddress = process.env.EMAIL_FROM_ADDRESS ?? process.env.EMAIL_USER!;
-
-    await transporter.sendMail({
-      from: `"${fromName}" <${fromAddress}>`,
-      to: `${toName} <${toEmail}>`,
-      subject,
-      html: htmlContent,
-    });
-  } catch (error: any) {
-    console.error(`Send email error: ${error.message}`);
-  }
 }
 
 export function registerEmail(userName: string, userEmail: string): void {
