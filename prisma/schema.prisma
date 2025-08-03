@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserInterestsEnum {
+  saude
+  tecnologia
+  negocios
+  engenharia
+  arte_design
+  comunicacao
+  meio_ambiente
+  educacao
+  empreendedorismo
+  financas
+  outro
+}
+
+enum UserSkillsEnum {
+  comunicacao
+  organizacao
+  criatividade
+  logica
+  lideranca
+  adaptabilidade
+  trabalho_equipe
+  idiomas
+  programacao
+  excel
+  ferramentas_digitais
+  resolucao_problemas
+  outra
+}
+
+enum TwoYearGoalsEnum {
+  conseguir_emprego
+  ingressar_faculdade
+  curso_tecnico
+  empreender
+  aprender_ferramenta_tecnica
+  melhorar_habilidades_sociais
+  fazer_intercambio
+  aprender_idioma
+  ainda_nao_sei
+}
+
+enum SoftSkillsEnum {
+  comunicacao
+  criatividade
+  persistencia
+  organizacao
+  trabalho_equipe
+  empatia
+  lideranca
+  flexibilidade
+  resolucao_problemas
+  inteligencia_emocional
+}
+
+enum HardSkillsEnum {
+  excel
+  power_bi
+  canva
+  python
+  banco_dados
+  atendimento_cliente
+  criacao_conteudo
+  vendas
+  design_grafico
+  nenhuma
+}
+
+enum DifficultiesEnum {
+  organizacao
+  entendimento
+  ansiedade
+  carreira
+  estrutura_de_estudo
+  nenhuma
+}
+
+enum DevicesEnum {
+  celular
+  computador
+  tablet
+  nenhum
+}
+
+enum DiscoveryLevel {
+  library
+  florest
+  city
+  cybercity
+}
+
+model User {
+  id                  Int                  @id @default(autoincrement())
+  
+  name                String
+  
+  email               String               @unique
+  password            String
+}
