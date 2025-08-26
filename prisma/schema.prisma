@@ -14,9 +14,6 @@ model User {
   email               String               @unique
 
   password            String
-<<<<<<< Updated upstream
-}
-=======
   passwordVersion     Int                  @default(0)
   passwordChangedAt   DateTime             @default(now())
 }
@@ -35,4 +32,3 @@ model PasswordReset {
   @@index([email, used, expiresAt])
   @@index([email, createdAt])
 }
->>>>>>> Stashed changes
