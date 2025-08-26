@@ -1,6 +1,6 @@
 # Auth API Template
 
-Template de API de autenticação segura usando Node.js, TypeScript, PostgreSQL, Prisma, JWT e Nodemailer.
+Secure authentication API template using Node.js, TypeScript, PostgreSQL, Prisma, JWT, and Nodemailer.
 
 &nbsp;
 
@@ -8,111 +8,82 @@ Template de API de autenticação segura usando Node.js, TypeScript, PostgreSQL,
 
 - [Node.js](https://nodejs.org/)
 - [TypeScript](https://www.typescriptlang.org/)
+- [Express.js](https://expressjs.com)
 - [Prisma ORM](https://www.prisma.io/)
 - [JWT](https://jwt.io/)
 - [PostgreSQL](https://www.postgresql.org/)
 - [Docker](https://www.docker.com/)
 - [Nodemailer](https://nodemailer.com/about/)
+- [Jest](https://jestjs.io) (unit testing)
 
 &nbsp;
 
-## 🔐 Funcionalidades principais
+## 🔐 Key Features
 
-- ✅ Registro e login com geração e retorno de token JWT para sessões seguras
-- 🔐 Armazenamento seguro de senhas utilizando Bcrypt com sal e hash
-- ✉️ Recuperação de senha via código temporário enviado por email (com expiração configurável)
-- 🛡️ Middleware de proteção JWT para rotas autenticadas, com verificação automática de token
+- ✅ Registration and login with JWT token generation for secure sessions
+- 🔐 Secure password storage using Bcrypt with salt and hash
+- ✉️ Password recovery via temporary code sent by email (configurable expiration)
+- 🛡️ JWT protection middleware for authenticated routes, with automatic token verification
+- 🧪 Unit tests implemented using Jest
 
 &nbsp;
 
-## ⚙️ Configuração do projeto
+## ⚙️ Project Setup
 
-### 1. Clone o repositório
+### 1. Clone the repository
 
 ```
 git clone https://github.com/SamuelPSantiago/auth-api-template.git
 cd auth-api-template
 ```
 
-### 2. Arquivo `.env`
+### 2. `.env` File
 
-Crie um `.env` com base no exemplo:
+Create a `.env` file based on the example:
 
 ```
+NODE_ENV="development" or "production"
+
 DATABASE_URL="postgresql://user:password@db:5432/mydb"
-JWT_SECRET="sua_chave_secreta"
+JWT_SECRET="your_secret_key"
 
-EMAIL_HOST="smtp.seuprovedor.com"
+EMAIL_HOST="smtp.yourprovider.com"
 EMAIL_PORT="587"
-EMAIL_USER="email@dominio.com"
-EMAIL_PASS="senha"
-EMAIL_FROM_NAME="Nome do Remetente"
-EMAIL_FROM_ADDRESS="email@dominio.com"
+EMAIL_USER="email@domain.com"
+EMAIL_PASS="password"
+EMAIL_FROM_NAME="Sender Name"
+EMAIL_FROM_ADDRESS="email@domain.com"
 ```
 
 &nbsp;
 
-## 📦 Scripts disponíveis
+## 📦 Available Scripts
 
-| Script              | Descrição                               |
-|---------------------|-----------------------------------------|
-| npm run dev         | Inicia a API em modo desenvolvimento    |
-| npm run build       | Compila os arquivos TypeScript          |
-| npm run start       | Inicia a API em produção (`dist/`)      |
-| npx prisma studio   | Interface gráfica para banco de dados   |
-
-&nbsp;
-
-## 📁 Estrutura do Projeto
-
-O projeto está organizado de forma modular e escalável, separando responsabilidades por domínio:
-
-```
-src/
-├── controllers/
-│   └── auth.controller.ts         # Controlador de autenticação (registro, login, etc.)
-|
-├── email/
-│   ├── templates/                 # Templates HTML para emails
-│   │   ├── passwordRecovery.html
-│   │   └── register.html
-│   └── index.ts                   # Monta os emails usando os templates
-|
-├── middlewares/
-│   └── auth.middleware.ts         # Middleware de autenticação JWT
-|
-├── routes/
-│   └── auth.ts
-|
-├── services/
-│   └── emailService.ts            # Serviço de envio de emails via Nodemailer
-|
-├── types/
-│   ├── auth.ts
-│   └── email.ts
-|
-├── utils/
-│   └── generateToken.ts           # Função de geração de token JWT
-|
-└── index.ts                       # Ponto de entrada principal da aplicação
-```
+| Script              | Description                              |
+|---------------------|------------------------------------------|
+| npm run dev         | Starts the API in development mode       |
+| npm run build       | Compiles TypeScript files                |
+| npm run start       | Starts the API in production (`dist/`)   |
+| npx run test        | Runs unit tests with Jest                |
+| npx prisma studio   | Graphical interface for the database     |
 
 &nbsp;
 
 ## 🐳 Docker
 
-O projeto está preparado para rodar com Docker e Docker Compose. Para isso, basta executar:
+The project is ready to run with Docker and Docker Compose. To do this, simply run:
 
 ```
 docker compose build
 docker compose up
 ```
 
-Isso iniciará a API e o banco de dados PostgreSQL automaticamente, com persistência de dados configurada. Certifique-se de preencher corretamente o arquivo `.env` antes de subir os containers.
+This will start the API and the PostgreSQL database automatically, with data persistence configured. Make sure to correctly fill in the `.env` file before starting the containers.
 
 &nbsp;
 
-## 👨‍💻 Autor
+## 👨‍💻 Author
 
 **Samuel Pinheiro Santiago**  
-Desenvolvedor Full Stack - [LinkedIn](https://www.linkedin.com/in/samuel-pinheiro-santiago/)
+Full Stack Developer - [LinkedIn](https://www.linkedin.com/in/samuel-pinheiro-santiago/)
+
