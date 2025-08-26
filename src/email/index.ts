@@ -15,7 +15,7 @@ function fillTemplate(template: string, data: Record<string, string>): string {
   );
 }
 
-export function registerEmail(userName: string, userEmail: string): void {
+export function sendRegisterEmail(userName: string, userEmail: string): void {
   const template = loadTemplate("registerEmail.html");
   const body = fillTemplate(template, { USERNAME: userName });
 
@@ -27,8 +27,8 @@ export function registerEmail(userName: string, userEmail: string): void {
   });
 }
 
-export function passwordRecoveryEmail(userName: string, userEmail: string, code: string): void {
-  const template = loadTemplate("passwordRecoveryEmail.html");
+export function sendPasswordResetEmail(userName: string, userEmail: string, code: string): void {
+  const template = loadTemplate("passwordResetEmail.html");
   const body = fillTemplate(template, { USERNAME: userName, CODE: code });
 
   sendEmail({

@@ -1,30 +1,54 @@
 import { Request, Response, NextFunction } from "express";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 
-import generateToken from "../utils/generateToken";
-import { registerEmail, passwordRecoveryEmail } from "../email";
+import generateToken from "@/utils/generateToken";
+import { sendRegisterEmail } from "@/email";
 
-import { RegisterRequestBody, LoginRequestBody } from "../types/auth";
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
-const prisma = new PrismaClient();
+const emailSchema = z
+  .string("Email is required")
+  .email("Invalid email!")
+  .transform((s) => s.toLowerCase().trim());
 
-export const register = async (req: Request<any, any, RegisterRequestBody>, res: Response, next: NextFunction): Promise<any> => {
+const passwordRegSchema = z
+    .string("Password is required")
+    .min(8, "Password must be at least 8 characters.")
+    .max(128, "Password cannot exceed 128 characters.")
+    .refine((password) => /[A-Z]/.test(password), "Password must contain at least one uppercase letter.")
+    .refine((password) => /[a-z]/.test(password), "Password must contain at least one lowercase letter.")
+    .refine((password) => /\d/.test(password), "Password must contain at least one number.")
+    .refine((password) => /[^A-Za-z0-9]/.test(password), "Password must contain at least one symbol.");
+
+const passwordLogSchema = z
+  .string("Password is required")
+  .nonempty("Password cannot be empty");
+
+const nameSchema = z
+  .string("Name is required")
+  .min(2, "Name must be at least 2 characters")
+  .max(50, "Name cannot exceed 50 characters")
+  .regex(/^[\p{L}\s'.-]+$/u, "Name can only contain letters and spaces")
+  .trim();
+
+const registerSchema = z.object({ name: nameSchema, email: emailSchema, password: passwordRegSchema });
+const loginSchema = z.object({ email: emailSchema, password: passwordLogSchema });
+const checkEmailSchema = z.object({ email: emailSchema });
+
+function validationError(res: Response, error: z.ZodError) {
+  return res.status(400).json({ error: "Validation error", details: error.flatten() });
+}
+
+export const register = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = registerSchema.parse(req.body);
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Campos obrigatórios ausentes ou incompletos!" });
-    }
+    const userExists = await prisma.user.findUnique({ where: { email } });
+    if (userExists) return res.status(409).json({ error: "Email is already in use!" });
 
-    const userExists = await prisma.user.findFirst({
-      where: { OR: [{ email }] },
-    });
-
-    if (userExists) return res.status(400).json({ error: "O email já está em uso!" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     const user = await prisma.user.create({
       data: {
@@ -34,158 +58,47 @@ export const register = async (req: Request<any, any, RegisterRequestBody>, res:
       },
     });
 
-    registerEmail(user.name, user.email);
+    sendRegisterEmail(user.name, user.email);
 
     const token = generateToken(user.id, user.email);
-    return res.status(201).json({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      token,
-    });
+    return res.status(201).json({ id: user.id, name: user.name, email: user.email, token });
   } catch (err) {
-    next(err);
+    if (err instanceof z.ZodError)
+      return res.status(400).json({ error: "Validation error", details: err.flatten() });
+    return next(err);
   }
 };
 
-export const login = async (req: Request<any, any, LoginRequestBody>, res: Response, next: NextFunction): Promise<any> => {
+export const login = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
-    let { email, password } = req.body;
+    const { email, password } = loginSchema.parse(req.body);
 
-    if (!email || !password)
-      return res
-        .status(400)
-        .json({ error: "Preencha todos os campos!" });
-
-    email = email.toLowerCase().trim();
-    const isValidEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.toLowerCase())
-
-    if (!isValidEmail(email))
-      return res.status(400).json({ error: "Email inválido!" });
-
-    const user = await prisma.user.findUnique({ where: { email }, include: { discoveryProgress: true } });
-    if (!user) return res.status(400).json({ error: "Email e/ou senha incorretos!" });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(401).json({ error: "Incorrect email or password!" });
 
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(400).json({ error: "Email e/ou senha incorretos!" });
+    if (!valid) return res.status(401).json({ error: "Incorrect email or password!" });
 
     const token = generateToken(user.id, user.email);
-
-    return res.json({
-      token,
-    });
+    return res.status(200).json({ token });
   } catch (err) {
-    next(err);
+    if (err instanceof z.ZodError)
+      return res.status(400).json({ error: "Validation error", details: err.flatten() });
+    return next(err);
   }
 };
 
 export const checkEmailExists = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
   try {
-    let { email } = req.body;
+    const { email } = checkEmailSchema.parse(req.body);
 
-    if (!email)
-      return res
-        .status(400)
-        .json({ error: "Preencha o campo de email!" });
+    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    if (user) return res.status(200).json({ exists: true, message: "Email is already registered!" });
 
-    email = email.toLowerCase().trim();
-
-    const isValidEmail = (email: string): boolean =>
-      /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
-
-    if (!isValidEmail(email))
-      return res.status(400).json({ error: "Email inválido!" });
-
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
-
-    if (user) {
-      return res
-        .status(200)
-        .json({ exists: true, message: "Email já cadastrado no banco!" });
-    }
-
-    return res
-      .status(200)
-      .json({ exists: false, message: "Email disponível." });
+    return res.status(200).json({ exists: false, message: "Email is available." });
   } catch (err) {
-    next(err);
+    if (err instanceof z.ZodError)
+      return res.status(400).json({ error: "Validation error", details: err.flatten() });
+    return next(err);
   }
 };
-
-export const sendRecoveryCode = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
-  try {
-    const { email } = req.body;
-
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(404).json({ error: "Usuário não encontrado" });
-
-    const code = crypto.randomInt(100000, 999999).toString();
-    const expiresAt = new Date(Date.now() + 1000 * 60 * 5);
-
-    await prisma.passwordReset.create({
-      data: { email, code, expiresAt },
-    });
-
-    passwordRecoveryEmail(user.name, user.email, code);
-
-    return res.status(200).json({ message: "Código enviado para o email" });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export const verifyRecoveryCode = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
-  try {
-    const { email, code } = req.body;
-
-    const record = await prisma.passwordReset.findFirst({
-      where: {
-        email,
-        code,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    if (!record) return res.status(400).json({ error: "Código inválido ou expirado" });
-
-    return res.status(200).json({ message: "Código válido" });
-  } catch (err) {
-    next(err);
-  }
-}
-
-export const resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
-  try {
-    const { email, code, newPassword } = req.body;
-
-    const record = await prisma.passwordReset.findFirst({
-      where: {
-        email,
-        code,
-        used: false,
-        expiresAt: { gt: new Date() },
-      },
-    });
-
-    if (!record) return res.status(400).json({ error: "Código inválido ou expirado" });
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await prisma.user.update({
-      where: { email },
-      data: { password: hashedPassword },
-    });
-
-    await prisma.passwordReset.update({
-      where: { id: record.id },
-      data: { used: true },
-    });
-
-    return res.status(200).json({ message: "Senha redefinida com sucesso" });
-  } catch (err) {
-    next(err);
-  }
-}
