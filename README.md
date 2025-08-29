@@ -207,9 +207,6 @@ npm test
 
 # Run tests in watch mode
 npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
 ```
 
 ### Test Coverage
@@ -224,4 +221,5 @@ npm run test:coverage
 ## 👨‍💻 Author
 
 **Samuel Pinheiro Santiago**  
+
 Full Stack Developer - [LinkedIn](https://www.linkedin.com/in/samuel-pinheiro-santiago/)
