@@ -16,6 +16,8 @@ model User {
   password            String
   passwordVersion     Int                  @default(0)
   passwordChangedAt   DateTime             @default(now())
+
+  refreshTokens       RefreshToken[]
 }
 
 model PasswordReset {
@@ -31,4 +33,21 @@ model PasswordReset {
 
   @@index([email, used, expiresAt])
   @@index([email, createdAt])
+}
+
+model RefreshToken {
+  id                  String               @id @default(cuid())
+  userId              Int
+  token               String               @unique
+  expiresAt           DateTime
+  isRevoked           Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  userAgent           String?
+  ipAddress           String?
+
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRevoked])
+  @@index([token, isRevoked])
+  @@index([expiresAt])
 }

@@ -15,14 +15,14 @@ function fillTemplate(template: string, data: Record<string, string>): string {
   );
 }
 
-export function sendRegisterEmail(userName: string, userEmail: string): void {
-  const template = loadTemplate("registerEmail.html");
+export async function sendRegisterEmail(userName: string, userEmail: string): Promise<void> {
+  const template = loadTemplate("register.html");
   const body = fillTemplate(template, { USERNAME: userName });
 
-  sendEmail({
+  await sendEmail({
     toEmail: userEmail,
     toName: userName,
-    subject: "Bem-vindo!",
+    subject: "Welcome!",
     htmlContent: body
   });
 }
@@ -34,7 +34,7 @@ export function sendPasswordResetEmail(userName: string, userEmail: string, code
   sendEmail({
     toEmail: userEmail,
     toName: userName,
-    subject: "Código de recuperação de senha",
+    subject: "Password recovery code",
     htmlContent: body
   });
 }

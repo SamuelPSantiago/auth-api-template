@@ -6,25 +6,25 @@ import {
 } from "./passwordReset";
 
 describe("passwordReset utils", () => {
-  test("generateResetCode deve gerar string hex", () => {
+  test("generateResetCode should generate hex string", () => {
     const code = generateResetCode();
     expect(code).toMatch(/^[a-f0-9]+$/i);
     expect(code.length).toBe(8);
   });
 
-  test("validatePasswordPolicy deve falhar para senha fraca", () => {
+  test("validatePasswordPolicy should fail for weak password", () => {
     const weakPw = "abc123";
     const result = validatePasswordPolicy(weakPw);
     expect(result).not.toBeNull();
   });
 
-  test("validatePasswordPolicy deve passar para senha forte", () => {
+  test("validatePasswordPolicy should pass for strong password", () => {
     const strongPw = "Str0ng@Password!";
     const result = validatePasswordPolicy(strongPw);
     expect(result).toBeNull();
   });
 
-  test("hashResetCode e compareResetCode devem funcionar", async () => {
+  test("hashResetCode and compareResetCode should work", async () => {
     const code = "abcd1234";
     const hash = await hashResetCode(code);
     const isValid = await compareResetCode(code, hash);

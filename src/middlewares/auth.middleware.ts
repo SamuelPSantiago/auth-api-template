@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-
+import { verifyAccessToken } from '@/utils/generateToken';
 import { TokenPayload } from '../types/auth';
 
 const authenticateClient = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -11,18 +10,18 @@ const authenticateClient = async (req: Request, res: Response, next: NextFunctio
       : req.body?.token;
 
     if (!token) {
-      res.status(401).json({ error: 'Token não fornecido' });
+      res.status(401).json({ error: 'Token not provided' });
       return;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as TokenPayload;
+    const decoded = verifyAccessToken(token) as TokenPayload;
 
-    (req as any).id = decoded.id;
+    (req as any).userId = decoded.id;
     (req as any).email = decoded.email;
     next();
   } catch (err) {
-    res.status(401).json({ error: 'Token inválido ou expirado' });
+    res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 
-export default authenticateClient;
+export { authenticateClient as authMiddleware };

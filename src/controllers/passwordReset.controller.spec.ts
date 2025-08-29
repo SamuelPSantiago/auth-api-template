@@ -184,7 +184,7 @@ describe("PasswordReset Controller", () => {
 
   describe('resetPassword', () => {
     it('Returns 400 on invalid request (Zod)', async () => {
-      const req = mockReq({ email: 'user@example.com', code: 'ABC' }); // missing newPassword
+      const req = mockReq({ email: 'user@example.com', code: 'ABC' });
       const res = mockRes();
 
       await resetPassword(req, res, nextFn());

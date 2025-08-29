@@ -1,10 +1,10 @@
 # Auth API Template
 
-Template de API de autenticação segura usando Node.js, TypeScript, PostgreSQL, Prisma, JWT e Nodemailer.
+Secure authentication API template using Node.js, TypeScript, PostgreSQL, Prisma, JWT and Nodemailer.
 
 &nbsp;
 
-## 🚀 Tecnologias utilizadas
+## 🚀 Technologies used
 
 - [Node.js](https://nodejs.org/)
 - [TypeScript](https://www.typescriptlang.org/)
@@ -13,106 +13,219 @@ Template de API de autenticação segura usando Node.js, TypeScript, PostgreSQL,
 - [PostgreSQL](https://www.postgresql.org/)
 - [Docker](https://www.docker.com/)
 - [Nodemailer](https://nodemailer.com/about/)
+- [Zod](https://zod.dev/) - Data validation
+- [Jest](https://jestjs.io/) - Unit testing
+- [bcryptjs](https://github.com/dcodeIO/bcrypt.js/) - Password hashing
 
 &nbsp;
 
-## 🔐 Funcionalidades principais
+## 🔐 Main features
 
-- ✅ Registro e login com geração e retorno de token JWT para sessões seguras
-- 🔐 Armazenamento seguro de senhas utilizando Bcrypt com sal e hash
-- ✉️ Recuperação de senha via código temporário enviado por email (com expiração configurável)
-- 🛡️ Middleware de proteção JWT para rotas autenticadas, com verificação automática de token
+- ✅ **User registration and login** with JWT token generation for secure sessions
+- 🔄 **Refresh Token system** for automatic session renewal
+- 🔐 **Secure password storage** using Bcrypt with salt and hash
+- ✉️ **Advanced password recovery** via temporary code sent by email
+- 🛡️ **JWT protection middleware** for authenticated routes
+- 🔒 **Logout and bulk logout** with token revocation
+- ⏱️ **Configurable expiration control** for tokens and reset codes
+- 🚫 **Rate limiting** for spam prevention in password reset
+- 📊 **Attempt tracking** and security logs
+- 🧪 **Comprehensive unit tests** for all features
 
 &nbsp;
 
-## ⚙️ Configuração do projeto
+## 🔄 Token System
 
-### 1. Clone o repositório
+### Access Token
+- **Duration**: 15 minutes
+- **Usage**: Authentication in requests
+- **Storage**: Client (localStorage, cookies, etc.)
+
+### Refresh Token
+- **Duration**: 7 days
+- **Usage**: Automatic access token renewal
+- **Storage**: Database with device tracking
+- **Security**: Individual and bulk revocation
+
+&nbsp;
+
+## ⚙️ Project setup
+
+### 1. Clone the repository
 
 ```
 git clone https://github.com/SamuelPSantiago/auth-api-template.git
 cd auth-api-template
 ```
 
-### 2. Arquivo `.env`
+### 2. Environment file
 
-Crie um `.env` com base no exemplo:
+Create a `.env` file based on the example:
 
 ```
+# Database
 DATABASE_URL="postgresql://user:password@db:5432/mydb"
-JWT_SECRET="sua_chave_secreta"
 
-EMAIL_HOST="smtp.seuprovedor.com"
+# JWT Secrets
+JWT_SECRET="your_access_token_secret_key"
+JWT_REFRESH_SECRET="your_refresh_token_secret_key"
+
+# Email Configuration
+EMAIL_HOST="smtp.yourprovider.com"
 EMAIL_PORT="587"
-EMAIL_USER="email@dominio.com"
-EMAIL_PASS="senha"
-EMAIL_FROM_NAME="Nome do Remetente"
-EMAIL_FROM_ADDRESS="email@dominio.com"
+EMAIL_USER="email@domain.com"
+EMAIL_PASS="password"
+EMAIL_FROM_NAME="Sender Name"
+EMAIL_FROM_ADDRESS="email@domain.com"
+
+# Security Settings
+BCRYPT_ROUNDS="12"
+RESET_TTL_MINUTES="15"
+MAX_REQUESTS_PER_HOUR_PER_EMAIL="3"
+MAX_VERIFICATION_ATTEMPTS="5"
 ```
 
 &nbsp;
 
-## 📦 Scripts disponíveis
+## 📦 Available scripts
 
-| Script              | Descrição                               |
-|---------------------|-----------------------------------------|
-| npm run dev         | Inicia a API em modo desenvolvimento    |
-| npm run build       | Compila os arquivos TypeScript          |
-| npm run start       | Inicia a API em produção (`dist/`)      |
-| npx prisma studio   | Interface gráfica para banco de dados   |
+| Script                  | Description                               |
+|-------------------------|-------------------------------------------|
+| npm run dev             | Starts the API in development mode        |
+| npm run build           | Compiles TypeScript files                 |
+| npm run start           | Starts the API in production (`dist/`)    |
+| npm run test            | Runs unit tests                           |
+| npm run test:watch      | Runs tests in watch mode                  |
+| npm run prisma:studio   | Database GUI interface                    |
+| npm run prisma:migrate  | Runs database migrations                  |
 
 &nbsp;
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
-O projeto está organizado de forma modular e escalável, separando responsabilidades por domínio:
+The project is organized in a modular and scalable way, separating responsibilities by domain:
 
 ```
 src/
 ├── controllers/
-│   └── auth.controller.ts         # Controlador de autenticação (registro, login, etc.)
-|
+│   ├── auth.controller.ts              # Authentication controller (register, login)
+│   ├── refreshToken.controller.ts      # Refresh token controller
+│   └── passwordReset.controller.ts     # Password reset controller
+│
 ├── email/
-│   ├── templates/                 # Templates HTML para emails
-│   │   ├── passwordRecovery.html
+│   ├── templates/                      # HTML email templates
+│   │   ├── passwordReset.html
 │   │   └── register.html
-│   └── index.ts                   # Monta os emails usando os templates
-|
+│   └── index.ts                        # Email assembly using templates
+│
+├── lib/
+│   └── prisma.ts                       # Configured Prisma client
+│
 ├── middlewares/
-│   └── auth.middleware.ts         # Middleware de autenticação JWT
-|
+│   └── auth.middleware.ts              # JWT authentication middleware
+│
 ├── routes/
-│   └── auth.ts
-|
+│   ├── auth.routes.ts                  # Authentication routes
+│   ├── refreshToken.routes.ts          # Refresh token routes
+│   └── passwordReset.routes.ts         # Password reset routes
+│
 ├── services/
-│   └── emailService.ts            # Serviço de envio de emails via Nodemailer
-|
+│   ├── emailService.ts                 # Email sending service
+│   └── refreshTokenService.ts          # Refresh token management service
+│
 ├── types/
-│   ├── auth.ts
-│   └── email.ts
-|
+│   ├── auth.ts                         # Authentication-related types
+│   └── email.ts                        # Email-related types
+│
 ├── utils/
-│   └── generateToken.ts           # Função de geração de token JWT
-|
-└── index.ts                       # Ponto de entrada principal da aplicação
+│   ├── generateToken.ts                # Token generation and verification functions
+│   ├── passwordReset.ts                # Password reset utilities
+│   └── cleanupTokens.ts                # Automatic cleanup of expired tokens
+│
+└── index.ts                            # Main application entry point
 ```
+
+&nbsp;
+
+## 🔌 API Endpoints
+
+### Authentication
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login
+
+### Refresh Tokens
+- `POST /auth/refresh` - Renew access token
+- `POST /auth/logout` - Logout (revokes refresh token)
+- `POST /auth/logout-all` - Bulk logout (revokes all tokens)
+
+### Password Reset
+- `POST /auth/request-reset` - Request password reset
+- `POST /auth/verify-code` - Verify reset code
+- `POST /auth/reset-password` - Set new password
+
+&nbsp;
+
+## 🛡️ Security Features
+
+### Password Validation
+- Minimum 8 characters
+- Maximum 128 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special symbol
+
+### Rate Limiting
+- Maximum 3 reset requests per hour per email
+- Maximum 5 code verification attempts
+- Reset codes expire in 15 minutes (configurable)
+
+### Security Tracking
+- IP and User-Agent for each request
+- Verification attempt history
+- Token revocation logs
+- Password versioning
 
 &nbsp;
 
 ## 🐳 Docker
 
-O projeto está preparado para rodar com Docker e Docker Compose. Para isso, basta executar:
+The project is ready to run with Docker and Docker Compose. Simply run:
 
 ```
 docker compose build
 docker compose up
 ```
 
-Isso iniciará a API e o banco de dados PostgreSQL automaticamente, com persistência de dados configurada. Certifique-se de preencher corretamente o arquivo `.env` antes de subir os containers.
+This will start the API and PostgreSQL database automatically, with configured data persistence. Make sure to properly fill the `.env` file before starting the containers.
 
 &nbsp;
 
-## 👨‍💻 Autor
+## 🧪 Testing
+
+The project includes a comprehensive unit test suite:
+
+```bash
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Test Coverage
+- ✅ Authentication controllers
+- ✅ Refresh token controllers
+- ✅ Password reset controllers
+- ✅ Authentication middlewares
+- ✅ Validation utilities
+
+&nbsp;
+
+## 👨‍💻 Author
 
 **Samuel Pinheiro Santiago**  
-Desenvolvedor Full Stack - [LinkedIn](https://www.linkedin.com/in/samuel-pinheiro-santiago/)
+Full Stack Developer - [LinkedIn](https://www.linkedin.com/in/samuel-pinheiro-santiago/)

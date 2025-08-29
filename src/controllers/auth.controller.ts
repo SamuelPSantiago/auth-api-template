@@ -1,104 +1,174 @@
-import { Request, Response, NextFunction } from "express";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { z } from "zod";
+import { Request, Response, NextFunction } from 'express';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
+import { generateTokenPair } from '@/utils/generateToken';
+import { RefreshTokenService } from '@/services/refreshTokenService';
+import { sendRegisterEmail } from '@/email';
 
-import generateToken from "@/utils/generateToken";
-import { sendRegisterEmail } from "@/email";
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
 
-const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
+const isValidPassword = (password: string): boolean => {
+  return password.length >= 8;
+};
 
-const emailSchema = z
-  .string("Email is required")
-  .email("Invalid email!")
-  .transform((s) => s.toLowerCase().trim());
+const isValidName = (name: string): boolean => {
+  return name.length >= 2;
+};
 
-const passwordRegSchema = z
-    .string("Password is required")
-    .min(8, "Password must be at least 8 characters.")
-    .max(128, "Password cannot exceed 128 characters.")
-    .refine((password) => /[A-Z]/.test(password), "Password must contain at least one uppercase letter.")
-    .refine((password) => /[a-z]/.test(password), "Password must contain at least one lowercase letter.")
-    .refine((password) => /\d/.test(password), "Password must contain at least one number.")
-    .refine((password) => /[^A-Za-z0-9]/.test(password), "Password must contain at least one symbol.");
-
-const passwordLogSchema = z
-  .string("Password is required")
-  .nonempty("Password cannot be empty");
-
-const nameSchema = z
-  .string("Name is required")
-  .min(2, "Name must be at least 2 characters")
-  .max(50, "Name cannot exceed 50 characters")
-  .regex(/^[\p{L}\s'.-]+$/u, "Name can only contain letters and spaces")
-  .trim();
-
-const registerSchema = z.object({ name: nameSchema, email: emailSchema, password: passwordRegSchema });
-const loginSchema = z.object({ email: emailSchema, password: passwordLogSchema });
-const checkEmailSchema = z.object({ email: emailSchema });
-
-function validationError(res: Response, error: z.ZodError) {
-  return res.status(400).json({ error: "Validation error", details: error.flatten() });
-}
-
-export const register = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, email, password } = registerSchema.parse(req.body);
+    const { name, email, password } = req.body;
 
-    const userExists = await prisma.user.findUnique({ where: { email } });
-    if (userExists) return res.status(409).json({ error: "Email is already in use!" });
+    if (!name || !email || !password) {
+      res.status(400).json({ error: 'Name, email and password are required' });
+      return;
+    }
 
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    if (!isValidName(name)) {
+      res.status(400).json({ error: 'Validation error' });
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: 'Validation error' });
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      res.status(400).json({ error: 'Validation error' });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      res.status(409).json({ error: 'Email is already in use!' });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: email.toLowerCase(),
         password: hashedPassword,
       },
     });
 
-    sendRegisterEmail(user.name, user.email);
+    const refreshTokenData = await RefreshTokenService.createRefreshToken(
+      user.id,
+      req.headers['user-agent'] || null,
+      req.ip || null
+    );
 
-    const token = generateToken(user.id, user.email);
-    return res.status(201).json({ id: user.id, name: user.name, email: user.email, token });
-  } catch (err) {
-    if (err instanceof z.ZodError)
-      return res.status(400).json({ error: "Validation error", details: err.flatten() });
-    return next(err);
+    const tokens = generateTokenPair(user.id, user.email, refreshTokenData.id);
+
+    await sendRegisterEmail(user.name, user.email);
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      ...tokens,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const login = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email, password } = loginSchema.parse(req.body);
+    const { email, password } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(401).json({ error: "Incorrect email or password!" });
+    if (!email || !password) {
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
+    }
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: "Incorrect email or password!" });
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: 'Validation error' });
+      return;
+    }
 
-    const token = generateToken(user.id, user.email);
-    return res.status(200).json({ token });
-  } catch (err) {
-    if (err instanceof z.ZodError)
-      return res.status(400).json({ error: "Validation error", details: err.flatten() });
-    return next(err);
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (!user) {
+      res.status(401).json({ error: 'Incorrect email or password!' });
+      return;
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      res.status(401).json({ error: 'Incorrect email or password!' });
+      return;
+    }
+
+    const refreshTokenData = await RefreshTokenService.createRefreshToken(
+      user.id,
+      req.headers['user-agent'] || null,
+      req.ip || null
+    );
+
+    const tokens = generateTokenPair(user.id, user.email, refreshTokenData.id);
+
+    res.status(200).json({
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      ...tokens,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const checkEmailExists = async (req: Request, res: Response, next: NextFunction): Promise<any> => {
+export const checkEmailExists = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { email } = checkEmailSchema.parse(req.body);
+    const { email } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-    if (user) return res.status(200).json({ exists: true, message: "Email is already registered!" });
+    if (!email) {
+      res.status(400).json({ error: 'Email is required' });
+      return;
+    }
 
-    return res.status(200).json({ exists: false, message: "Email is available." });
-  } catch (err) {
-    if (err instanceof z.ZodError)
-      return res.status(400).json({ error: "Validation error", details: err.flatten() });
-    return next(err);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      res.status(400).json({ error: 'Validation error' });
+      return;
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      res.status(200).json({ 
+        exists: true, 
+        message: 'Email is already registered!' 
+      });
+      return;
+    }
+
+    res.status(200).json({ 
+      exists: false, 
+      message: 'Email is available.' 
+    });
+  } catch (error) {
+    next(error);
   }
 };

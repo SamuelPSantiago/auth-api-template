@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import authenticateClient from './auth.middleware';
+import { authMiddleware } from './auth.middleware';
 import generateTokenApp from '../utils/generateToken';
 
 jest.mock('jsonwebtoken');
@@ -22,11 +22,11 @@ describe('Auth Middleware & Token Generator', () => {
     jest.clearAllMocks();
   });
 
-  describe('authenticateClient', () => {
+  describe('authMiddleware', () => {
 
-    it('✅ deve chamar next() e adicionar id/email ao request com um token válido no header', async () => {
-      const tokenPayload = { id: 1, email: 'teste@exemplo.com' };
-      const token = 'um-token-valido';
+    it('should call next() and add id/email to request with a valid token in header', async () => {
+      const tokenPayload = { id: 1, email: 'test@example.com' };
+      const token = 'valid-token';
       
       mockRequest.headers = {
         authorization: `Bearer ${token}`,
@@ -34,45 +34,44 @@ describe('Auth Middleware & Token Generator', () => {
 
       (jwt.verify as jest.Mock).mockReturnValue(tokenPayload);
 
-      await authenticateClient(
+      await authMiddleware(
         mockRequest as Request,
         mockResponse as Response,
         nextFunction
       );
 
       expect(jwt.verify).toHaveBeenCalledWith(token, JWT_SECRET);
-      expect((mockRequest as any).id).toBe(tokenPayload.id);
+      expect((mockRequest as any).userId).toBe(tokenPayload.id);
       expect((mockRequest as any).email).toBe(tokenPayload.email);
       expect(nextFunction).toHaveBeenCalledTimes(1);
       expect(mockResponse.status).not.toHaveBeenCalled();
     });
 
-    it('❌ deve retornar erro 401 se o token não for fornecido', async () => {
+    it('should return 401 error if token is not provided', async () => {
       mockRequest.headers = {};
 
-      await authenticateClient(
+      await authMiddleware(
         mockRequest as Request,
         mockResponse as Response,
         nextFunction
       );
 
-      // Asserções
       expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Token não fornecido' });
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Token not provided' });
       expect(nextFunction).not.toHaveBeenCalled();
     });
 
-    it('❌ deve retornar erro 401 se o token for inválido ou expirado', async () => {
-      const invalidToken = 'token-invalido';
+    it('should return 401 error if token is invalid or expired', async () => {
+      const invalidToken = 'invalid-token';
       mockRequest.headers = {
         authorization: `Bearer ${invalidToken}`,
       };
 
       (jwt.verify as jest.Mock).mockImplementation(() => {
-        throw new Error('Token inválido');
+        throw new Error('Invalid token');
       });
 
-      await authenticateClient(
+      await authMiddleware(
         mockRequest as Request,
         mockResponse as Response,
         nextFunction
@@ -80,15 +79,15 @@ describe('Auth Middleware & Token Generator', () => {
 
       expect(jwt.verify).toHaveBeenCalledWith(invalidToken, JWT_SECRET);
       expect(mockResponse.status).toHaveBeenCalledWith(401);
-      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Token inválido ou expirado' });
+      expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid or expired token' });
       expect(nextFunction).not.toHaveBeenCalled();
     });
   });
 
   describe('generateTokenApp', () => {
-    it('✅ deve chamar jwt.sign com os parâmetros corretos', () => {
+    it('should call jwt.sign with correct parameters', () => {
       const id = 100;
-      const email = 'gerador@teste.com';
+      const email = 'generator@test.com';
       
       generateTokenApp(id, email);
 
