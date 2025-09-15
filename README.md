@@ -14,6 +14,7 @@ Secure authentication API template using Node.js, TypeScript, PostgreSQL, Prisma
 - [PostgreSQL](https://www.postgresql.org/)
 - [Docker](https://www.docker.com/)
 - [Nodemailer](https://nodemailer.com/about/)
+- [Handlebars](https://handlebarsjs.com/) - Email template engine
 - [Zod](https://zod.dev/) - Data validation
 - [Jest](https://jestjs.io/) - Unit testing
 - [bcryptjs](https://github.com/dcodeIO/bcrypt.js/) - Password hashing
@@ -25,7 +26,8 @@ Secure authentication API template using Node.js, TypeScript, PostgreSQL, Prisma
 - ✅ **User registration and login** with JWT token generation for secure sessions
 - 🔄 **Refresh Token system** for automatic session renewal
 - 🔐 **Secure password storage** using Bcrypt with salt and hash
-- ✉️ **Advanced password recovery** via temporary code sent by email
+- ✉️ **Advanced email system** with Handlebars templates, queue with retry logic, and preheader support
+- 🔄 **Password recovery** via temporary code sent by email
 - 🛡️ **JWT protection middleware** for authenticated routes
 - 🔒 **Logout and bulk logout** with token revocation
 - ⏱️ **Configurable expiration control** for tokens and reset codes
@@ -81,6 +83,12 @@ EMAIL_USER="email@domain.com"
 EMAIL_PASS="password"
 EMAIL_FROM_NAME="Sender Name"
 EMAIL_FROM_ADDRESS="email@domain.com"
+EMAIL_SECURE="false"  # true for 465, false for other ports
+EMAIL_MAX_CONNECTIONS="5"
+EMAIL_MAX_MESSAGES="100"
+EMAIL_MAX_RETRIES="3"
+EMAIL_RETRY_BASE_DELAY_MS="500"
+EMAIL_QUEUE_INTERVAL_MS="200"
 
 # Security Settings
 BCRYPT_ROUNDS="12"
@@ -117,10 +125,10 @@ src/
 │   └── passwordReset.controller.ts     # Password reset controller
 │
 ├── email/
-│   ├── templates/                      # HTML email templates
-│   │   ├── passwordReset.html
-│   │   └── register.html
-│   └── index.ts                        # Email assembly using templates
+│   ├── templates/                      # Handlebars email templates
+│   │   ├── passwordReset.html          # Password reset template with preheader
+│   │   └── register.html               # Welcome template with preheader
+│   └── index.ts                        # Email service with Handlebars rendering
 │
 ├── lib/
 │   └── prisma.ts                       # Configured Prisma client
@@ -134,7 +142,8 @@ src/
 │   └── passwordReset.routes.ts         # Password reset routes
 │
 ├── services/
-│   ├── emailService.ts                 # Email sending service
+│   ├── emailService.ts                 # Email sending service with validation
+│   ├── emailQueue.ts                   # Email queue with retry logic and backoff
 │   └── refreshTokenService.ts          # Refresh token management service
 │
 ├── types/
@@ -166,6 +175,28 @@ src/
 - `POST /auth/request-reset` - Request password reset
 - `POST /auth/verify-code` - Verify reset code
 - `POST /auth/reset-password` - Set new password
+
+&nbsp;
+
+## 📧 Email System Features
+
+### Template Engine
+- **Handlebars** for secure variable interpolation with automatic escaping
+- **Preheader support** for better email client preview
+- **Template caching** in production, hot-reload in development
+- **Automatic text generation** from HTML content
+
+### Queue & Reliability
+- **In-memory queue** with configurable processing interval
+- **Exponential backoff** retry strategy with jitter
+- **Configurable retry limits** and delays
+- **Error logging** with detailed failure information
+
+### Email Configuration
+- **SMTP support** with connection pooling
+- **Development mode** with JSON transport for testing
+- **Flexible authentication** (optional for some providers)
+- **Environment-based configuration**
 
 &nbsp;
 

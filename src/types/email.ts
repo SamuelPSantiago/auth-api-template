@@ -3,4 +3,5 @@ export interface SendEmailParams {
   toName: string;
   subject: string;
   htmlContent: string;
+  textContent?: string;
 }
